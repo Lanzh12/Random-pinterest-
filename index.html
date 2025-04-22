@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pinterest Viewer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <style>
+    body {
+      background-color: #0f172a;
+    }
+
+    * {
+      transition: all 0.3s ease-in-out;
+      will-change: transform, opacity;
+    }
+
+    .glow-hover:hover {
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.6);
+      transform: scale(1.03);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-fadeInUp {
+      animation: fadeInUp 0.6s ease-out both;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+
+    .dots::after {
+      content: '';
+      display: inline-block;
+      animation: dots 1.2s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: ''; }
+      40% { content: '.'; }
+      60% { content: '..'; }
+      80%, 100% { content: '...'; }
+    }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .loading-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body class="text-white relative">
+
+  <!-- Loading -->
+  <div id="loading" class="loading-overlay">
+    <div class="flex flex-col items-center text-[#1e293b]">
+      <div class="text-5xl spin mb-2">⌛</div>
+      <div class="text-lg font-bold">Memutar<span class="dots"></span></div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="min-h-screen px-4 py-6 pt-10">
+    <div class="flex justify-center mb-6 animate-fadeInUp">
+      <input id="search" type="text" placeholder="Cari di Pinterest..." class="w-full max-w-md px-4 py-3 rounded-lg bg-[#1e293b] text-white placeholder:text-white/40 focus:outline-none border border-white/10 focus:ring-2 focus:ring-blue-500" />
+      <button onclick="searchPinterest()" class="ml-3 px-5 py-3 rounded-lg font-medium text-white bg-gradient-to-r from-blue-500 to-pink-500 glow-hover">
+        Cari
+      </button>
+    </div>
+
+    <div id="results" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fadeInUp">
+      <!-- Results will appear here -->
+    </div>
+
+    <div id="no-result" class="text-center text-white text-lg mt-10 hidden">
+      Yah, nggak ada hasil yang cocok...
+    </div>
+  </div>
+
+  <!-- Footer Credit -->
+  <footer class="text-center text-sm text-gray-400 py-6">
+    By <a href="https://github.com/lanzh12" target="_blank" class="underline hover:text-white">LamzOffc</a>
+  </footer>
+
+  <script>
+    function searchPinterest() {
+      const query = $('#search').val().trim();
+      if (!query) return;
+
+      $('#loading').addClass('show');
+      $('#results').empty();
+      $('#no-result').hide();
+
+      $.get(`https://api.alfixd.my.id/api/pinterest?q=${encodeURIComponent(query)}`, function (res) {
+        if (res.status === 200 && res.results && res.results.length > 0) {
+          let imagesLoaded = 0;
+          const total = res.results.length;
+
+          res.results.forEach(item => {
+            const img = new Image();
+            img.src = item.image;
+            img.onload = () => {
+              imagesLoaded++;
+              if (imagesLoaded >= total) {
+                $('#loading').removeClass('show');
+              }
+            };
+
+            const card = `
+              <div class="bg-[#1e293b] rounded-lg overflow-hidden shadow-lg glow-hover transition transform hover:-translate-y-1">
+                <a href="${item.source}" target="_blank">
+                  <img src="${item.image}" alt="${item.caption}" class="w-full h-60 object-cover">
+                </a>
+                <div class="p-3">
+                  <p class="text-sm text-gray-300 mb-2">${item.caption || 'No caption'}</p>
+                  <p class="text-xs text-gray-400 mb-2">By: ${item.upload_by}</p>
+                  <a href="${item.image}" download class="text-sm bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full inline-block">Download</a>
+                </div>
+              </div>
+            `;
+            $('#results').append(card);
+          });
+        } else {
+          $('#loading').removeClass('show');
+          $('#no-result').show();
+        }
+      }).fail(() => {
+        $('#loading').removeClass('show');
+        $('#no-result').text('Terjadi kesalahan saat mengambil data.').show();
+      });
+    }
+  </script>
+</body>
+</html
